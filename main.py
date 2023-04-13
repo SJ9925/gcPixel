@@ -12,7 +12,6 @@ import tempfile
 
 temp_files, temp_file_objs = [], []
 
-
 def saveVideoToCloudinary(videoFile, topic_name):
 	# Set up Cloudinary configuration
 	cloudinary.config(
@@ -173,7 +172,7 @@ def create_audio_from_gpt(topic_name, video_genre):
 	topicsList = [topic_name]
 	language = 'Hindi'
 
-	access_token = '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'
+	access_token = os.environ['GPT_SECRET_KEY']
 
 	headers = {
 		'Authorization': 'Bearer ' + access_token,
