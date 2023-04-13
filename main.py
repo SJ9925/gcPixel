@@ -173,7 +173,7 @@ def create_audio_from_gpt(topic_name, video_genre):
 	topicsList = [topic_name]
 	language = 'Hindi'
 
-	access_token = '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'
+	access_token = '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'
 
 	headers = {
 		'Authorization': 'Bearer ' + access_token,
