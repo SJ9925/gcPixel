@@ -16,6 +16,7 @@ COPY . .
 # Expose port to allow outside traffic
 EXPOSE $PORT
 
+
 # Start the FastAPI server using uvicorn
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port $PORT"]
 
