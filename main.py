@@ -173,7 +173,7 @@ def create_audio_from_gpt(topic_name, video_genre):
 	topicsList = [topic_name]
 	language = 'Hindi'
 
-	access_token = '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'
+	access_token = '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'
 
 	headers = {
 		'Authorization': 'Bearer ' + access_token,
@@ -197,7 +197,7 @@ def create_audio_from_gpt(topic_name, video_genre):
 		print("Received response from gpt for topic "+topic_name)
 
 		map_resp = json.loads(response.text)
-		# print(map_resp)
+		print(map_resp)
 
 		videoContent = map_resp['choices'][0]['message']['content']
 		# videoContent = topic_name
