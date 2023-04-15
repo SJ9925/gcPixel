@@ -12,6 +12,8 @@ import tempfile
 
 temp_files, temp_file_objs = [], []
 
+language_gtts_map = {"english":"en", "hindi":"hi"}
+
 def saveVideoToCloudinary(videoFile, topic_name):
 	# Set up Cloudinary configuration
 	cloudinary.config(
@@ -163,14 +165,17 @@ def cleanup_tmp_files():
 		except Exception as e:
 			print("File removal failed: ", e)
 
-def create_audio_from_gpt(topic_name, video_genre):
+def create_audio_from_gpt(topic_name, video_genre, language):
+
+	language = language.lower()
+
 	# Define the URL for the ChatGPT endpoint
 	endpoint = "https://api.openai.com/v1/chat/completions"
 
 	# Define parameters for the request
 
 	topicsList = [topic_name]
-	language = 'Hindi'
+	# language = 'Hindi'
 
 	access_token = os.environ['GPT_SECRET_KEY']
 
@@ -186,7 +191,7 @@ def create_audio_from_gpt(topic_name, video_genre):
 			"messages": [
 				{
 					"role": "user",
-					"content": "Generate text for a full length class on " + topic_name + "written in " + language
+					"content": "Generate text for a 2-3 minute audio on " + topic_name + " written in " + language + ". Please explain the topic in detail and do not include precursor text such as explaining that this is the answer. Start the answer by directly explaining the topic in detail. Please end the script with a suitable conclusion. Do not include any disclaimer like texts in the answer such as As an AI Language model etc."
 				}
 			]
 		}
@@ -204,7 +209,13 @@ def create_audio_from_gpt(topic_name, video_genre):
 		# with open("content\\"+topic_name+"_"+language+".txt", mode="w", encoding='utf-8') as file:
 		# 	file.write(videoContent)
 		# print(topic_name + " file written")
-		audio = convertTextToAudioLib(videoContent,'hi',topic_name)
+		gttsLang = 'en'
+		if(language in language_gtts_map):
+			gttsLang = language_gtts_map[language]
+		else:
+			print("Language not present in gttsMap, defaulting to English")
+
+		audio = convertTextToAudioLib(videoContent,gttsLang,topic_name)
 		print(topic_name + " audio file generated")
 		video = convertAudioToVideo(audio, video_genre)
 		print(topic_name + " video file generated")
@@ -220,11 +231,12 @@ app = FastAPI()
 class InputData(BaseModel):
 	topic_name: str
 	video_genre: str
+	language: str
 
 
 @app.post("/process_input")
 async def process_input(input_data: InputData, background_tasks: BackgroundTasks):
 	# background_tasks.add_task(create_audio_from_gpt, input_data.input_str)
 	# Replace this with your actual processing logic
-	audioFileLink = create_audio_from_gpt(input_data.topic_name, input_data.video_genre)
+	audioFileLink = create_audio_from_gpt(input_data.topic_name, input_data.video_genre, input_data.language)
 	return {"video_file_link": audioFileLink}
