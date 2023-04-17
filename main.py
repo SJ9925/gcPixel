@@ -12,7 +12,121 @@ import tempfile
 
 temp_files, temp_file_objs = [], []
 
-language_gtts_map = {"english":"en", "hindi":"hi"}
+language_gtts_map = {
+ "english": "en", 
+ "hindi": "hi",
+ "afrikaans":  "af",
+ "albanian":  "sq",
+ "amharic":  "am",
+ "arabic":  "ar",
+ "armenian":  "hy",
+ "azerbaijani":  "az",
+ "basque":  "eu",
+ "belarusian":  "be",
+ "bengali":  "bn",
+ "bosnian":  "bs",
+ "bulgarian":  "bg",
+ "burmese":  "my",
+ "catalan":  "ca",
+ "cebuano":  "ceb",
+ "chinese (mandarin) ":  "zh-cn",
+ "corsican":  "co",
+ "croatian":  "hr",
+ "czech":  "cs",
+ "danish":  "da",
+ "dutch":  "nl",
+ "english":  "en",
+ "esperanto":  "eo",
+ "estonian":  "et",
+ "filipino":  "tl",
+ "finnish":  "fi",
+ "french":  "fr",
+ "frisian":  "fy",
+ "galician":  "gl",
+ "georgian":  "ka",
+ "german":  "de",
+ "greek":  "el",
+ "gujarati":  "gu",
+ "haitian":  "creole ht",
+ "hausa":  "ha",
+ "hawaiian":  "haw",
+ "hebrew":  "he",
+ "hindi":  "hi",
+ "hmong":  "hmn",
+ "hungarian":  "hu",
+ "icelandic":  "is",
+ "igbo":  "ig",
+ "indonesian":  "id",
+ "irish":  "ga",
+ "italian":  "it",
+ "japanese":  "ja",
+ "javanese":  "jv",
+ "kannada":  "kn",
+ "kazakh":  "kk",
+ "khmer":  "km",
+ "kinyarwanda":  "rw",
+ "korean":  "ko",
+ "kurdish":  "ku",
+ "kyrgyz":  "ky",
+ "lao":  "lo",
+ "latin":  "la",
+ "latvian":  "lv",
+ "lithuanian":  "lt",
+ "luxembourgish":  "lb",
+ "macedonian":  "mk",
+ "malagasy":  "mg",
+ "malay":  "ms",
+ "malayalam":  "ml",
+ "maltese":  "mt",
+ "maori":  "mi",
+ "marathi":  "mr",
+ "mongolian":  "mn",
+ "myanmar (burmese) ":  "my",
+ "nepali":  "ne",
+ "norwegian":  "no",
+ "nyanja (chichewa) ":  "ny",
+ "odia (oriya)":  "or",
+ "pashto":  "ps",
+ "persian":  "fa",
+ "polish":  "pl",
+ "portuguese (brazil) ":  "pt-br",
+ "portuguese (portugal) ":  "pt-pt",
+ "punjabi":  "pa",
+ "romanian":  "ro",
+ "russian":  "ru",
+ "samoan":  "sm",
+ "scots gaelic":  "gd",
+ "serbian":  "sr",
+ "sesotho":  "st",
+ "shona":  "sn",
+ "sindhi":  "sd",
+ "sinhala (sinhalese) ":  "si",
+ "slovak":  "sk",
+ "slovenian":  "sl",
+ "somali":  "so",
+ "spanish":  "es",
+ "sundanese":  "su",
+ "swahili":  "sw",
+ "swedish":  "sv",
+ "tagalog (filipino) ":  "tl",
+ "tajik":  "tg",
+ "tamil":  "ta",
+ "tatar":  "tt",
+ "telugu":  "te",
+ "thai":  "th",
+ "turkish":  "tr",
+ "turkmen":  "tk",
+ "ukrainian":  "uk",
+ "urdu":  "ur",
+ "uyghur":  "ug",
+ "uzbek":  "uz",
+ "vietnamese":  "vi",
+ "welsh":  "cy",
+ "xhosa":  "xh",
+ "yiddish":  "yi",
+ "yoruba":  "yo",
+ "zulu":  "zu"
+}
 
 def saveVideoToCloudinary(videoFile, topic_name):
 	# Set up Cloudinary configuration
@@ -52,7 +166,7 @@ def convertGttsToAudioLib(gttsObj):
 		temp_filename = temp_file.name
 		temp_files.append(temp_filename)
 
-	print("Saved temp audio to ", temp_filename)
+	print("Saved temp audio to", temp_filename)
 	return AudioFileClip(temp_filename)
 
 
@@ -82,7 +196,7 @@ def getConcatenatedVideoForAudio(audio_file, videos_data):
 		with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
 			temp_file.write(response.content)
 			temp_filename = temp_file.name
-			print("Wrote pexel video to " + temp_filename)
+			print("Wrote pexel video to" + temp_filename)
 			temp_files.append(temp_filename)
 
 		#Convert temp file to VideoFileClip
@@ -160,7 +274,7 @@ def cleanup_tmp_files():
 
 	for file in temp_files:
 		try:
-			print("Removing "+file)
+			print("Removing"+file)
 			os.remove(file)
 		except Exception as e:
 			print("File removal failed: ", e)
@@ -191,14 +305,14 @@ def create_audio_from_gpt(topic_name, video_genre, language):
 			"messages": [
 				{
 					"role": "user",
-					"content": "Generate text for a 2-3 minute audio on " + topic_name + " written in " + language + ". Please explain the topic in detail and do not include precursor text such as explaining that this is the answer. Start the answer by directly explaining the topic in detail. Please end the script with a suitable conclusion. Do not include any disclaimer like texts in the answer such as As an AI Language model etc."
+					"content": "Generate text for a 2-3 minute audio on" + topic_name + " written in" + language + ". Please explain the topic in detail and do not include precursor text such as explaining that this is the answer. Start the answer by directly explaining the topic in detail. Please end the script with a suitable conclusion. Do not include any disclaimer like texts in the answer such as As an AI Language model etc."
 				}
 			]
 		}
 
-		print("Requesting gpt for topic "+topic_name)
+		print("Requesting gpt for topic"+topic_name)
 		response = requests.post(endpoint, json=payload, headers = headers)
-		print("Received response from gpt for topic "+topic_name)
+		print("Received response from gpt for topic"+topic_name)
 
 		map_resp = json.loads(response.text)
 		print(map_resp)
