@@ -343,7 +343,7 @@ def create_audio_from_gpt(topic_name, video_genre, language):
 		return cloudinaryLink
 
 # Define a function to store a URL in Firestore
-def store_url_in_firestore(url, db, cred, userId):
+def store_url_in_firestore(url, db, userId):
 	# Create a new document reference
 	doc_ref = db.collection("users").document(userId).collection("history")
 	# Set the URL field of the document
@@ -374,5 +374,5 @@ async def process_input(input_data: InputData, background_tasks: BackgroundTasks
 	# Replace this with your actual processing logic
 	audioFileLink = create_audio_from_gpt(input_data.topic_name, input_data.video_genre, input_data.language)
 
-	store_url_in_firestore(audioFileLink, db, cred, input_data.user_id)
+	store_url_in_firestore(audioFileLink, db, input_data.user_id)
 	return {"video_file_link": audioFileLink}
