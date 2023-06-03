@@ -8,10 +8,13 @@ import time
 import cloudinary
 import cloudinary.uploader
 from moviepy.editor import *
-import tempfile
+import tempfile, ffmpeg
+import subprocess
+
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+
 
 temp_files, temp_file_objs = [], []
 
@@ -161,16 +164,75 @@ def saveVideoToCloudinary(videoFile, topic_name):
 
 
 def convertGttsToAudioLib(gttsObj):
-	with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
-		# Write the audio data to the temporary file
+	with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as temp_file:
 		gttsObj.write_to_fp(temp_file)
-
-		# Get the filename of the temporary file
 		temp_filename = temp_file.name
 		temp_files.append(temp_filename)
 
-	print("Saved temp audio to", temp_filename)
-	return AudioFileClip(temp_filename)
+	print("Saved temp audio to ", temp_filename)
+	return temp_filename
+
+def concatenate_videos_with_audio(video_filenames, audio_filename, output_filename):
+	video_inputs = " ".join(f"-i {video}" for video in video_filenames)
+	audio_input = f"-i {audio_filename}"
+	video_filters = ";".join(f"[{i}:v]scale=640:480,setsar=1[v{i}]" for i in range(len(video_filenames)))
+	concat_filter = "".join(f"[v{i}]" for i in range(len(video_filenames))) + f"concat=n={len(video_filenames)}:v=1:a=0[outv]"
+	output_options = "-map [outv] -map 1:a -c:v libx264 -preset fast -c:a aac -b:a 128k -shortest -movflags faststart -vsync vfr -af \"aresample=async=1\" -max_muxing_queue_size 1024"
+
+	cmd = f"ffmpeg {video_inputs} {audio_input} -filter_complex \"{video_filters};{concat_filter}\" {output_options} {output_filename}"
+	subprocess.call(cmd, shell=True)
+
+
+
+def getConcatenatedVideoForAudio(audio_filename, videos_data):
+	video_filenames = []
+	audio_duration = ffmpeg.probe(audio_filename)['format']['duration']
+	audio_duration = float(audio_duration)
+
+	cur_duration = 0
+	for video_data in videos_data:
+		video_url = video_data['video_files'][0]['link']
+		response = requests.get(video_url)
+
+		with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_file:
+			temp_file.write(response.content)
+			temp_filename = temp_file.name
+			temp_files.append(temp_filename)
+
+		video_duration = ffmpeg.probe(temp_filename)['streams'][0]['duration']
+		video_duration = float(video_duration)
+
+		# if cur_duration + video_duration <= audio_duration:
+		if cur_duration <= audio_duration:
+			video_filenames.append(temp_filename)
+			cur_duration += video_duration
+		else:
+			break
+
+	with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as output_temp_file:
+		output_filename = output_temp_file.name
+		concatenate_videos_with_audio(video_filenames, audio_filename, output_filename)
+
+	return output_filename
+
+def convertAudioToVideo(audio_filename, video_genre):
+	pexelVideos = getVideosFromPexel(video_genre)
+	concatenated_video_filename = getConcatenatedVideoForAudio(audio_filename, pexelVideos)
+	return concatenated_video_filename
+
+
+
+# def convertGttsToAudioLib(gttsObj):
+# 	with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+# 		# Write the audio data to the temporary file
+# 		gttsObj.write_to_fp(temp_file)
+
+# 		# Get the filename of the temporary file
+# 		temp_filename = temp_file.name
+# 		temp_files.append(temp_filename)
+
+# 	print("Saved temp audio to", temp_filename)
+# 	return AudioFileClip(temp_filename)
 
 
 def convertTextToAudioLib(text, language, topic_name):
@@ -179,68 +241,68 @@ def convertTextToAudioLib(text, language, topic_name):
 
 	# return AudioFileClip(filepath)
 	audioLibFile = convertGttsToAudioLib(speech)
-	temp_file_objs.append(audioLibFile)
+	# temp_file_objs.append(audioLibFile)
 	return audioLibFile
 
 
-def getConcatenatedVideoForAudio(audio_file, videos_data):
-	source_videos = []
-	cur_duration = 0
-	shouldEnd = False
-	audio_duration = audio_file.duration
-	start_times = []
+# def getConcatenatedVideoForAudio(audio_file, videos_data):
+# 	source_videos = []
+# 	cur_duration = 0
+# 	shouldEnd = False
+# 	audio_duration = audio_file.duration
+# 	start_times = []
 
-	for i, video_data in enumerate(videos_data):
-		start_times.append(cur_duration)
-		video_url = video_data['video_files'][0]['link']
+# 	for i, video_data in enumerate(videos_data):
+# 		start_times.append(cur_duration)
+# 		video_url = video_data['video_files'][0]['link']
 
-		response = requests.get(video_url)
-		#Writing downloaded video to temp file
-		with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
-			temp_file.write(response.content)
-			temp_filename = temp_file.name
-			print("Wrote pexel video to" + temp_filename)
-			temp_files.append(temp_filename)
+# 		response = requests.get(video_url)
+# 		#Writing downloaded video to temp file
+# 		with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
+# 			temp_file.write(response.content)
+# 			temp_filename = temp_file.name
+# 			print("Wrote pexel video to" + temp_filename)
+# 			temp_files.append(temp_filename)
 
-		#Convert temp file to VideoFileClip
-		videoClip = VideoFileClip(temp_filename).resize((640,480))
-		temp_file_objs.append(videoClip)
+# 		#Convert temp file to VideoFileClip
+# 		videoClip = VideoFileClip(temp_filename).resize((640,480))
+# 		temp_file_objs.append(videoClip)
 
-		videoDuration = videoClip.duration
+# 		videoDuration = videoClip.duration
 
-		if(cur_duration + videoDuration <= audio_duration):
-			source_videos.append(videoClip)
-		else:
-			clippedVideo = videoClip.subclip(0, audio_duration - cur_duration)
-			source_videos.append(clippedVideo)
-			shouldEnd = True
-		# #TODO:Removing temp file
-		# os.remove(temp_filename)
-		cur_duration +=videoDuration
+# 		if(cur_duration + videoDuration <= audio_duration):
+# 			source_videos.append(videoClip)
+# 		else:
+# 			clippedVideo = videoClip.subclip(0, audio_duration - cur_duration)
+# 			source_videos.append(clippedVideo)
+# 			shouldEnd = True
+# 		# #TODO:Removing temp file
+# 		# os.remove(temp_filename)
+# 		cur_duration +=videoDuration
 
-		print(cur_duration, videoDuration, audio_duration)
+# 		print(cur_duration, videoDuration, audio_duration)
 
-		if shouldEnd:
-			break
+# 		if shouldEnd:
+# 			break
 
-	# Create a composite video from the source video clips
-	concatenated_video = concatenate_videoclips(source_videos)
+# 	# Create a composite video from the source video clips
+# 	concatenated_video = concatenate_videoclips(source_videos)
 
-	# Set the start times of the source video clips in the composite video
-	for i in range(len(source_videos)):
-		concatenated_video = concatenated_video.set_start(start_times[i])
+# 	# Set the start times of the source video clips in the composite video
+# 	for i in range(len(source_videos)):
+# 		concatenated_video = concatenated_video.set_start(start_times[i])
 
-	# Set the audio of the composite video to the audio of the audio file
-	concatenated_video = concatenated_video.set_audio(audio_file)
+# 	# Set the audio of the composite video to the audio of the audio file
+# 	concatenated_video = concatenated_video.set_audio(audio_file)
 
-	# # Export the composite video with the integrated audio
-	# concatenated_video.write_videofile("output8.mp4", fps=30, bitrate="5000k")
+# 	# # Export the composite video with the integrated audio
+# 	# concatenated_video.write_videofile("output8.mp4", fps=30, bitrate="5000k")
 
-	# for video in source_videos:
-	# 	video.close()
-	# audio_file.close()
+# 	# for video in source_videos:
+# 	# 	video.close()
+# 	# audio_file.close()
 
-	return concatenated_video
+# 	return concatenated_video
 
 def getVideosFromPexel(video_genre):
 	# Set up API key and topic
@@ -260,12 +322,25 @@ def getVideosFromPexel(video_genre):
 	print("Received response from pexel")
 	return data['videos']
 
-def convertAudioToVideo(audio_file, video_genre):
-	pexelVideos = getVideosFromPexel(video_genre)
-	# Extract video URLs and titles
-	concatenatedVideoFileClip = getConcatenatedVideoForAudio(audio_file, pexelVideos)
+# def convertAudioToVideo(audio_file, video_genre):
+# 	pexelVideos = getVideosFromPexel(video_genre)
+# 	# Extract video URLs and titles
+# 	concatenatedVideoFileClip = getConcatenatedVideoForAudio(audio_file, pexelVideos)
 
-	return concatenatedVideoFileClip
+# 	return concatenatedVideoFileClip
+
+
+# Define a function to store a URL in Firestore
+def store_url_in_firestore(url, db, cred, userId):
+	# Create a new document reference
+	doc_ref = db.collection("users").document(userId).collection("history")
+	# db.collection("users").document(userId).collection("history").add(url)
+
+	# Set the URL field of the document
+	doc_ref.add({
+		'response': url
+	})
+
 
 def cleanup_tmp_files():
 	for fileObj in temp_file_objs:
@@ -313,12 +388,12 @@ def create_audio_from_gpt(topic_name, video_genre, language):
 			]
 		}
 
-		print("Requesting gpt for topic"+topic_name)
+		print("Requesting gpt for topic "+topic_name)
 		response = requests.post(endpoint, json=payload, headers = headers)
 		print("Received response from gpt for topic"+topic_name)
 
 		map_resp = json.loads(response.text)
-		print(map_resp)
+		# print(map_resp)
 
 		videoContent = map_resp['choices'][0]['message']['content']
 		# videoContent = topic_name
@@ -335,31 +410,16 @@ def create_audio_from_gpt(topic_name, video_genre, language):
 		audio = convertTextToAudioLib(videoContent,gttsLang,topic_name)
 		print(topic_name + " audio file generated")
 		video = convertAudioToVideo(audio, video_genre)
-		print(topic_name + " video file generated")
-		cloudinaryLink = saveVideoToCloudinary(video, topic_name)
+		print(topic_name + " video file generated "+video)
+		# cloudinaryLink = saveVideoToCloudinary(video, topic_name)
+		cloudinaryLink = ""
 		print(topic_name + " video file saved on Cloudinary")
 
 		cleanup_tmp_files()
 		return cloudinaryLink
 
-# Define a function to store a URL in Firestore
-def store_url_in_firestore(url, db, cred, userId):
-	# Create a new document reference
-	doc_ref = db.collection("users").document(userId).collection("history")
-	# Set the URL field of the document
-	doc_ref.add({
-		'response': url
-	})
-
 
 app = FastAPI()
-
-# Initialize Firebase credentials
-cred = credentials.Certificate('/home/FIREBASE_CRED_FILE')
-firebase_admin.initialize_app(cred)
-
-# Initialize Firestore client
-db = firestore.client()
 
 class InputData(BaseModel):
 	topic_name: str
@@ -373,6 +433,13 @@ async def process_input(input_data: InputData, background_tasks: BackgroundTasks
 	# background_tasks.add_task(create_audio_from_gpt, input_data.input_str)
 	# Replace this with your actual processing logic
 	audioFileLink = create_audio_from_gpt(input_data.topic_name, input_data.video_genre, input_data.language)
+
+	# Initialize Firebase credentials
+	cred = credentials.Certificate('../firebase_creds.json')
+	firebase_admin.initialize_app(cred)
+
+	# Initialize Firestore client
+	db = firestore.client()
 
 	store_url_in_firestore(audioFileLink, db, cred, input_data.user_id)
 	return {"video_file_link": audioFileLink}
