@@ -303,26 +303,26 @@ def create_audio_from_gpt(topic_name, video_genre, language):
 	# print(topicsList)
 	for topic_name in topicsList:
 
-		payload = {
-			"model": "gpt-3.5-turbo",
-			"messages": [
-				{
-					"role": "user",
-					"content": "Generate text for a 2-3 minute audio on" + topic_name + " written in" + language + ". Please explain the topic in detail and do not include precursor text such as explaining that this is the answer. Start the answer by directly explaining the topic in detail. Please end the script with a suitable conclusion. Do not include any disclaimer like texts in the answer such as As an AI Language model etc."
-				}
-			]
-		}
+		# payload = {
+		# 	"model": "gpt-3.5-turbo",
+		# 	"messages": [
+		# 		{
+		# 			"role": "user",
+		# 			"content": "Generate text for a 2-3 minute audio on" + topic_name + " written in" + language + ". Please explain the topic in detail and do not include precursor text such as explaining that this is the answer. Start the answer by directly explaining the topic in detail. Please end the script with a suitable conclusion. Do not include any disclaimer like texts in the answer such as As an AI Language model etc."
+		# 		}
+		# 	]
+		# }
 
-		print("Requesting gpt for topic"+topic_name)
-		response = requests.post(endpoint, json=payload, headers = headers)
-		print("Received response from gpt for topic"+topic_name)
+		# print("Requesting gpt for topic"+topic_name)
+		# response = requests.post(endpoint, json=payload, headers = headers)
+		# print("Received response from gpt for topic"+topic_name)
 
-		map_resp = json.loads(response.text)
-		print(map_resp)
+		# map_resp = json.loads(response.text)
+		# print(map_resp)
 
-		videoContent = map_resp['choices'][0]['message']['content']
-		# videoContent = topic_name
-		# print(videoContent)
+		# videoContent = map_resp['choices'][0]['message']['content']
+		videoContent = topic_name
+		print(videoContent)
 		# with open("content\\"+topic_name+"_"+language+".txt", mode="w", encoding='utf-8') as file:
 		# 	file.write(videoContent)
 		# print(topic_name + " file written")
