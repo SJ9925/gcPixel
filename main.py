@@ -355,8 +355,8 @@ def store_url_in_firestore(url, db, cred, userId):
 app = FastAPI()
 
 # Initialize Firebase credentials
-cred = credentials.Certificate('/home/FIREBASE_CRED_FILE')
-firebase_admin.initialize_app(cred)
+# cred = credentials.Certificate('/home/FIREBASE_CRED_FILE')
+firebase_admin.initialize_app()
 
 # Initialize Firestore client
 db = firestore.client()
